@@ -7,17 +7,6 @@ Created on Sat May 30 19:51:46 2020
     
 import numpy as np
 
-prob_dict={3:0.05555555555555555, 
-           4:0.05555555555555555, 
-           5:0.1111111111111111, 
-           6:0.1111111111111111, 
-           7:0.16666666666666669, 
-           8:0.1111111111111111, 
-           9:0.1111111111111111, 
-           10:0.05555555555555555, 
-           11:0.05555555555555555}
-
-
 def get_place(pos, roll):
     # Compute new position on map
     pos+=roll
@@ -60,14 +49,18 @@ def chance(pos):
     else:
         base[5]+=1
         base[12]+=1
-        return np.multiply(base/17, comm_chest(pos)) 
-   
-def moves(pos):
-    # Probability of ending in each pos based on the input pos
-    base=np.zeros(42)
-    for i in range(3,12):
-        base[pos+i]=prob_dict(i)
-    return base
+        return (base/16 + base[pos]*comm_chest(pos)) 
+    
+def trigger_pos(pos, nb):
+    # Update player's position upon landing on a property
+    if pos in [7, 22, 36]:
+        base=chance(pos)
+    elif pos in [2, 17, 33]:
+        base=comm_chest(pos)
+    else:
+        base=base=np.zeros((42,), dtype=int)
+        base[pos]=1
+    return base/(36**nb)
     
 def roll(v=np.zeros(42), pos, nb=1):
     # Update vector with each roll
@@ -76,16 +69,18 @@ def roll(v=np.zeros(42), pos, nb=1):
             # Doubles
             if d1==d2:
                 if nb<3:
-                    """ Missing changes due to special places"""
-                    
-                    return roll(v, pos+d1+d2, nb+1)
+                    v+=trigger_pos(get_place(pos, d1+d2), nb)
+                    """Doesn't update more than one position"""
+                    roll(v, pos+d1+d2, nb+1)
                 else:
                     # Triple doubles
-                    v[40]+=1/216
-                    return v
+                    v[40]+=1/46656
             else:
-                base=moves(pos)
-                
+                if pos==40:
+                    v[41]+=(1/36**nb)
+                else:
+                    v+=trigger_pos(get_place(pos, d1+d2), nb)
+    return v
                 
 def get_vector(pos):
     # Compute transition probability vector given position
